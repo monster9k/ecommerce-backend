@@ -1,4 +1,7 @@
 import prisma from "../prismaClient";
+import bcrypt from "bcryptjs";
+
+const salt = bcrypt.genSaltSync(10);
 
 let checkUserEmail = async (userEmail: string) => {
   try {
@@ -10,6 +13,15 @@ let checkUserEmail = async (userEmail: string) => {
     } else {
       return false;
     }
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+let hashUserPassword = async (password: string) => {
+  try {
+    let hashPassword = await bcrypt.hashSync(password, salt);
+    return hashPassword;
   } catch (e) {
     console.log(e);
   }
@@ -29,11 +41,13 @@ const createUserService = async (
         hint: "Try logging in instead",
       };
     } else {
+      let hashPassWordFromBcrypt = await hashUserPassword(password);
+
       const result = await prisma.user.create({
         data: {
           username,
           email,
-          password,
+          password: hashPassWordFromBcrypt as string,
           role: "user",
         },
       });
