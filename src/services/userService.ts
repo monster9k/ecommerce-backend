@@ -1,5 +1,8 @@
 import prisma from "../prismaClient";
 import bcrypt from "bcryptjs";
+require("dotenv").config();
+
+const jwt = require("jsonwebtoken");
 
 const salt = bcrypt.genSaltSync(10);
 
@@ -41,7 +44,12 @@ const loginUserService = async (email: string, password: string) => {
         };
       } else {
         const { password: _, ...safeUser } = user;
+        const payload = safeUser;
+        const access_token = jwt.sign(payload, process.env.JWT_SERECT, {
+          expiresIn: process.env.JWT_EXPIRE,
+        });
         return {
+          access_token,
           success: true,
           message: "Login succeessfully",
           user: safeUser,
