@@ -27,6 +27,32 @@ let hashUserPassword = async (password: string) => {
   }
 };
 
+const loginUserService = async (email: string, password: string) => {
+  try {
+    let user = await prisma.user.findUnique({
+      where: { email },
+    });
+    if (user) {
+      let checkHashPassword = await bcrypt.compare(password, user.password);
+      if (!checkHashPassword) {
+        return {
+          success: false,
+          message: "Wrong password",
+        };
+      } else {
+        const { password: _, ...safeUser } = user;
+        return {
+          success: true,
+          message: "Login succeessfully",
+          user: safeUser,
+        };
+      }
+    }
+  } catch (e) {
+    console.log(e);
+  }
+};
+
 const createUserService = async (
   username: string,
   email: string,
@@ -63,4 +89,4 @@ const createUserService = async (
   }
 };
 
-export { createUserService };
+export { createUserService, loginUserService };
