@@ -97,4 +97,25 @@ const createUserService = async (
   }
 };
 
-export { createUserService, loginUserService };
+const getUserService = async () => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        createAt: true,
+      },
+      orderBy: { createAt: "desc" },
+    });
+    return {
+      success: true,
+      users: users,
+    };
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+export { createUserService, loginUserService, getUserService };
