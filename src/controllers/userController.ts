@@ -5,6 +5,7 @@ import {
   getUserService,
   createUserService,
 } from "../services/userService";
+import { AuthRequest } from "../middleware/auth";
 
 let createUser = async (req: Request, res: Response) => {
   const { username, email, password } = req.body;
@@ -24,4 +25,8 @@ let getUser = async (req: Request, res: Response) => {
   return res.status(200).json(data);
 };
 
-export { createUser, loginUser, getUser };
+let getAccountInfo = (req: AuthRequest, res: Response) => {
+  return res.status(200).json(req.user);
+};
+
+export { createUser, loginUser, getUser, getAccountInfo };

@@ -45,7 +45,7 @@ const loginUserService = async (email: string, password: string) => {
       } else {
         const { password: _, ...safeUser } = user;
         const payload = safeUser;
-        const access_token = jwt.sign(payload, process.env.JWT_SERECT, {
+        const access_token = jwt.sign(payload, process.env.JWT_SECRET, {
           expiresIn: process.env.JWT_EXPIRE,
         });
         return {
