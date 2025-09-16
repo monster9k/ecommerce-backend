@@ -6,6 +6,8 @@ import {
   loginUser,
   getUser,
   createUser,
+  editUser,
+  deleteUser,
   getAccountInfo,
 } from "../controllers/userController";
 import { auth, vertifyRole } from "../middleware/auth";
@@ -16,9 +18,15 @@ let initWebRouters = (app: Express) => {
   router.get("/api/hello", (Request, Response) => {
     Response.send("hello");
   });
+
+  // router user
   router.post("/api/register", createUser);
   router.post("/api/login", loginUser);
   router.get("/api/getAllUser", vertifyRole("admin"), getUser);
+  router.put("/api/edit-user/:id", editUser);
+  router.delete("/api/delete-user/:id", vertifyRole("admin"), deleteUser);
+
+  // get account
   router.get("/api/account", getAccountInfo);
   return app.use("/", router);
 };

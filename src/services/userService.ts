@@ -1,3 +1,4 @@
+import { deleteUser } from "../controllers/userController";
 import prisma from "../prismaClient";
 import bcrypt from "bcryptjs";
 require("dotenv").config();
@@ -118,4 +119,71 @@ const getUserService = async () => {
   }
 };
 
-export { createUserService, loginUserService, getUserService };
+const updateUserService = async (
+  id: number,
+  username: string,
+  email: string
+) => {
+  try {
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: id, // id phải đúng type (number hoặc string tuỳ schema)
+      },
+      data: {
+        ...(username && { username }),
+        ...(email && { email }),
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+      },
+    });
+    return {
+      success: true,
+      message: "User updated successfully",
+      updatedUser,
+    };
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+const deleteUserService = async (id: number) => {
+  try {
+    const deletedUser = await prisma.user.delete({
+      where: { id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+      },
+    });
+
+    return {
+      success: true,
+      message: "User deleted successfully",
+    };
+  } catch (e: any) {
+    if (e.code === "P2025") {
+      return {
+        success: false,
+        message: "User not found",
+      };
+    }
+
+    console.error(e);
+    return {
+      success: false,
+      message: "Internal server error",
+    };
+  }
+};
+
+export {
+  createUserService,
+  loginUserService,
+  getUserService,
+  updateUserService,
+  deleteUserService,
+};
