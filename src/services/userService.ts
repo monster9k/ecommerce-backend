@@ -1,4 +1,3 @@
-import { deleteUser } from "../controllers/userController";
 import prisma from "../prismaClient";
 import bcrypt from "bcryptjs";
 require("dotenv").config();
