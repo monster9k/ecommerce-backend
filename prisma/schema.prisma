@@ -83,7 +83,7 @@ model Order {
   createdAt  DateTime @default(now())
 
   user  User        @relation(fields: [userId], references: [id])
-  items OrderItem[]
+  items OrderItem[]   
 }
 
 model OrderItem {

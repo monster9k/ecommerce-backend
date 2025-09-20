@@ -2,38 +2,49 @@ import { Request, Response } from "express";
 import {
   createOrderService,
   getOrdersService,
-  updateOrderService,
+  getOrderByIdService,
+  updateOrderStatusService,
   deleteOrderService,
 } from "../services/orderService";
 
 export const createOrder = async (req: Request, res: Response) => {
-  const { userId, totalPrice, status } = req.body;
-  const result = await createOrderService(
-    Number(userId),
-    Number(totalPrice),
-    status
-  );
-  if (!result.success) return res.status(500).json(result);
-  res.json(result);
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+  const result = await createOrderService(req.user.id);
+  if (!result.success) return res.status(400).json(result);
+  res.json(result.order);
 };
 
 export const getOrders = async (req: Request, res: Response) => {
-  const result = await getOrdersService();
-  if (!result.success) return res.status(500).json(result);
-  res.json(result);
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+  const orders = await getOrdersService(req.user.id);
+  res.json(orders);
 };
 
-export const updateOrder = async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const getOrderById = async (req: Request, res: Response) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+  const order = await getOrderByIdService(Number(req.params.id), req.user.id);
+  if (!order) return res.status(404).json({ message: "Order not found" });
+  res.json(order);
+};
+
+export const updateOrderStatus = async (req: Request, res: Response) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
   const { status } = req.body;
-  const result = await updateOrderService(Number(id), status);
-  if (!result.success) return res.status(500).json(result);
-  res.json(result);
+  const order = await updateOrderStatusService(
+    Number(req.params.id),
+    status,
+    req.user.id
+  );
+  res.json(order);
 };
 
 export const deleteOrder = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await deleteOrderService(Number(id));
-  if (!result.success) return res.status(500).json(result);
-  res.json(result);
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+  await deleteOrderService(Number(req.params.id), req.user.id);
+  res.json({ success: true });
 };

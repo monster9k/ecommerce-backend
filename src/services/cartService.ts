@@ -12,23 +12,13 @@ export const createCartService = async (userId: number) => {
   }
 };
 
-// Get all carts
+// Get all cartss
 export const getCartsService = async () => {
   try {
     const carts = await prisma.cart.findMany({
       include: { items: true, user: true },
     });
     return { success: true, carts };
-  } catch (error) {
-    return { success: false, error };
-  }
-};
-
-// Delete Cart
-export const deleteCartService = async (id: number) => {
-  try {
-    await prisma.cart.delete({ where: { id } });
-    return { success: true };
   } catch (error) {
     return { success: false, error };
   }

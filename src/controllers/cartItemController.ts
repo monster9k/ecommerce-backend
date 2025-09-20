@@ -5,11 +5,23 @@ import {
   updateCartItemService,
   deleteCartItemService,
 } from "../services/cartItemService";
+import prisma from "../prismaClient";
 
 export const addCartItem = async (req: Request, res: Response) => {
-  const { cartId, productVariantId, quantity } = req.body;
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  let cart = await prisma.cart.findFirst({
+    where: { userId: req.user.id },
+  });
+  if (!cart) {
+    cart = await prisma.cart.create({
+      data: { userId: req.user.id },
+    });
+  }
+  const { productVariantId, quantity } = req.body;
   const result = await addCartItemService(
-    Number(cartId),
+    Number(cart.id),
     Number(productVariantId),
     Number(quantity)
   );
@@ -18,8 +30,19 @@ export const addCartItem = async (req: Request, res: Response) => {
 };
 
 export const getCartItems = async (req: Request, res: Response) => {
-  const { cartId } = req.params;
-  const result = await getCartItemsService(Number(cartId));
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  let cart = await prisma.cart.findFirst({
+    where: { userId: req.user.id },
+  });
+  if (!cart) {
+    cart = await prisma.cart.create({
+      data: { userId: req.user.id },
+    });
+  }
+  const result = await getCartItemsService(Number(cart.id));
+  console.log(result);
   if (!result.success) return res.status(500).json(result);
   res.json(result);
 };
