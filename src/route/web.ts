@@ -1,6 +1,7 @@
 import express from "express";
 import { Express } from "express";
 import { delay } from "../middleware/delay";
+import upload from "../config/cloudinary";
 
 import {
   loginUser,

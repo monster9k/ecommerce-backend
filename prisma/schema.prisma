@@ -22,6 +22,11 @@ model User {
   role     String
   createAt DateTime @default(now())
 
+
+  //avatar
+  avatarUrl String?
+  avatarPublicId String?
+
   carts  Cart[]
   orders Order[]
 }
@@ -38,6 +43,10 @@ model Product {
   name        String
   description String?
   createAt    DateTime @default(now())
+
+  //img 
+  imageUrl      String?
+  imagePublicId String?
 
   category Category         @relation(fields: [categoryId], references: [id])
   variants ProductVariant[]

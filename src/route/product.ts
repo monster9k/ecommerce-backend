@@ -1,7 +1,7 @@
 import express from "express";
 import { Express } from "express";
 import { delay } from "../middleware/delay";
-
+import upload from "../config/cloudinary";
 import {
   createProduct,
   getProducts,
@@ -16,11 +16,11 @@ let router = express.Router();
 let productRouter = (app: Express) => {
   router.use(auth);
   // Product
-  router.post("/api/product", createProduct);
+  router.post("/api/product", upload.single("image"), createProduct);
   router.get("/api/product", getProducts);
   router.get("/api/product/:id", getProductById);
-  router.put("/api/product/:id", editProduct);
-  router.delete("/api/product/:id", deleteProduct);
+  router.put("/api/product/:id", upload.single("image"), editProduct);
+  router.delete("/api/product/:id", upload.single("image"), deleteProduct);
   return app.use("/", router);
 };
 

@@ -3,7 +3,9 @@ import prisma from "../prismaClient";
 const createProductService = async (
   categoryId: number,
   name: string,
-  description: string
+  description: string,
+  imageUrl: string,
+  imagePublicId: string
 ) => {
   try {
     const newProduct = await prisma.product.create({
@@ -12,6 +14,8 @@ const createProductService = async (
         categoryId: Number(categoryId),
         name,
         description,
+        imageUrl,
+        imagePublicId,
       },
     });
     return {
@@ -51,7 +55,13 @@ const getProductByIdService = async (id: number) => {
 
 const editProductService = async (
   id: number,
-  data: { categoryId?: number | string; name?: string; description?: string }
+  data: {
+    categoryId?: number | string;
+    name?: string;
+    description?: string;
+    imageUrl?: string;
+    imagePublicId?: string;
+  }
 ) => {
   try {
     const updatedProduct = await prisma.product.update({
@@ -60,6 +70,8 @@ const editProductService = async (
         ...(data.categoryId && { categoryId: Number(data.categoryId) }),
         ...(data.name && { name: data.name }),
         ...(data.description && { description: data.description }),
+        ...(data.imageUrl && { imageUrl: data.imageUrl }),
+        ...(data.imagePublicId && { imagePublicId: data.imagePublicId }),
       },
       include: { category: true },
     });
@@ -71,9 +83,14 @@ const editProductService = async (
 
 const deleteProductService = async (id: number) => {
   try {
+    await prisma.productVariant.deleteMany({
+      where: { productId: Number(id) },
+    });
+
     await prisma.product.delete({
       where: { id: Number(id) },
     });
+
     return { success: true };
   } catch (error: any) {
     return { success: false, message: error.message };
