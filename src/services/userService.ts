@@ -1,7 +1,7 @@
 import prisma from "../prismaClient";
 import bcrypt from "bcryptjs";
 require("dotenv").config();
-
+import { v2 as cloudinary } from "cloudinary";
 const jwt = require("jsonwebtoken");
 
 const salt = bcrypt.genSaltSync(10);
@@ -64,7 +64,9 @@ const loginUserService = async (email: string, password: string) => {
 const createUserService = async (
   username: string,
   email: string,
-  password: string
+  password: string,
+  avatarUrl: string,
+  avatarPublicId: string
 ) => {
   try {
     let check = await checkUserEmail(email);
@@ -83,6 +85,8 @@ const createUserService = async (
           email,
           password: hashPassWordFromBcrypt as string,
           role: "user",
+          avatarUrl: avatarUrl,
+          avatarPublicId: avatarPublicId,
         },
       });
       return {
@@ -121,7 +125,9 @@ const getUserService = async () => {
 const updateUserService = async (
   id: number,
   username: string,
-  email: string
+  email: string,
+  avatarUrl?: string,
+  avatarPublicId?: string
 ) => {
   try {
     const updatedUser = await prisma.user.update({
@@ -131,11 +137,15 @@ const updateUserService = async (
       data: {
         ...(username && { username }),
         ...(email && { email }),
+        ...(avatarUrl && { avatarUrl }),
+        ...(avatarPublicId && { avatarPublicId }),
       },
       select: {
         id: true,
         username: true,
         email: true,
+        avatarUrl: true,
+        avatarPublicId: true,
       },
     });
     return {
@@ -150,6 +160,27 @@ const updateUserService = async (
 
 const deleteUserService = async (id: number) => {
   try {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        avatarPublicId: true,
+      },
+    });
+
+    if (!user) {
+      return {
+        success: false,
+        message: "User not found",
+      };
+    }
+
+    if (user.avatarPublicId) {
+      await cloudinary.uploader.destroy(user.avatarPublicId);
+    }
+
     const deletedUser = await prisma.user.delete({
       where: { id },
       select: {

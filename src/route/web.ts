@@ -21,11 +21,16 @@ let initWebRouters = (app: Express) => {
   });
 
   // router user
-  router.post("/api/register", createUser);
+  router.post("/api/register", upload.single("avatar"), createUser);
   router.post("/api/login", loginUser);
   router.get("/api/getAllUser", vertifyRole("admin"), getUser);
-  router.put("/api/edit-user/:id", editUser);
-  router.delete("/api/delete-user/:id", vertifyRole("admin"), deleteUser);
+  router.put("/api/edit-user/:id", upload.single("avatar"), editUser);
+  router.delete(
+    "/api/delete-user/:id",
+    vertifyRole("admin"),
+    upload.single("avatar"),
+    deleteUser
+  );
 
   // get account
   router.get("/api/account", getAccountInfo);
