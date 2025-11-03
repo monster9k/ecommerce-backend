@@ -4,6 +4,7 @@ import { delay } from "../middleware/delay";
 import upload from "../config/cloudinary";
 import {
   createProduct,
+  getProductDashBoard,
   getProducts,
   editProduct,
   deleteProduct,
@@ -17,6 +18,7 @@ let productRouter = (app: Express) => {
   router.use(auth);
   // Product
   router.post("/api/product", upload.single("image"), createProduct);
+  router.get("/api/productDB", getProductDashBoard);
   router.get("/api/product", getProducts);
   router.get("/api/product/:id", getProductById);
   router.put("/api/product/:id", upload.single("image"), editProduct);

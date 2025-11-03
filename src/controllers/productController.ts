@@ -2,6 +2,7 @@ import prisma from "../prismaClient";
 import { Request, Response } from "express";
 import {
   createProductService,
+  getProductDBService,
   getProductService,
   getProductByIdService,
   editProductService,
@@ -39,6 +40,18 @@ export const createProduct = async (req: Request, res: Response) => {
     return res.status(201).json(newProduct.product);
   }
 };
+
+export const getProductDashBoard = async (req: Request, res: Response) => {
+  try {
+    const products = await getProductDBService();
+    if (products.success) {
+      res.status(200).json(products.products);
+    }
+  } catch (error) {
+    res.status(500).json({ message: (error as Error).message });
+  }
+};
+
 export const getProducts = async (req: Request, res: Response) => {
   try {
     const products = await getProductService();

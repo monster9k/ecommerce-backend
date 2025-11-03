@@ -43,8 +43,21 @@ const loginUserService = async (email: string, password: string) => {
           message: "Wrong password",
         };
       } else {
-        const { password: _, ...safeUser } = user;
+        const { password: _, ...safeUser } = user; // ko bao gồm password trong user trả về
         const payload = safeUser;
+
+        let cart = await prisma.cart.findFirst({
+          where: { userId: user.id },
+          include: { items: true },
+        });
+
+        if (!cart) {
+          cart = await prisma.cart.create({
+            data: { userId: user.id },
+            include: { items: true },
+          });
+        }
+
         const access_token = jwt.sign(payload, process.env.JWT_SECRET, {
           expiresIn: process.env.JWT_EXPIRE,
         });
@@ -53,6 +66,7 @@ const loginUserService = async (email: string, password: string) => {
           success: true,
           message: "Login succeessfully",
           user: safeUser,
+          cart,
         };
       }
     }
@@ -89,6 +103,7 @@ const createUserService = async (
           avatarPublicId: avatarPublicId,
         },
       });
+
       return {
         success: true,
         message: "User registered successfully",
