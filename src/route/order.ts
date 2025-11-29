@@ -5,6 +5,7 @@ import { delay } from "../middleware/delay";
 import {
   createOrder,
   getOrders,
+  getAllOrders,
   getOrderById,
   updateOrderStatus,
   deleteOrder,
@@ -17,6 +18,7 @@ let orderRouter = (app: Express) => {
   router.use(auth);
   // Order
   router.post("/api/order", createOrder);
+  router.get("/api/all-oders", getAllOrders);
   router.get("/api/order", getOrders);
   router.get("/api/order/:id", getOrderById);
   router.put("/api/order/:id", updateOrderStatus);

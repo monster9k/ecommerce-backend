@@ -60,6 +60,12 @@ export const getOrdersService = async (userId: number) => {
   });
 };
 
+export const getAllOrdersService = async () => {
+  return prisma.order.findMany({
+    include: { items: true },
+  });
+};
+
 export const getOrderByIdService = async (id: number, userId: number) => {
   return prisma.order.findFirst({
     where: { id, userId }, // để không xem order người khác
