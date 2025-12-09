@@ -46,7 +46,12 @@ export const editProductVariantService = async (
   try {
     const updated = await prisma.productVariant.update({
       where: { id },
-      data: { size, color, price, stock },
+      data: {
+        ...(size && { size }),
+        ...(color && { color }),
+        ...(price && { price: Number(price) }),
+        ...(stock && { stock: Number(stock) }),
+      },
     });
     return { success: true, variant: updated };
   } catch (error) {

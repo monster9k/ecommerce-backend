@@ -5,6 +5,7 @@ import upload from "../config/cloudinary";
 import {
   createProduct,
   getProductDashBoard,
+  createProductDashBoard,
   getProducts,
   editProduct,
   deleteProduct,
@@ -19,9 +20,10 @@ let productRouter = (app: Express) => {
   // Product
   router.post("/api/product", upload.single("image"), createProduct);
   router.get("/api/productDB", getProductDashBoard);
+  router.post("/api/productDB", upload.single("image"), createProductDashBoard);
   router.get("/api/product", getProducts);
   router.get("/api/product/:id", getProductById);
-  router.put("/api/product/:id", upload.single("image"), editProduct);
+  router.put("/api/productDB/:id", upload.single("image"), editProduct);
   router.delete("/api/product/:id", upload.single("image"), deleteProduct);
   return app.use("/", router);
 };

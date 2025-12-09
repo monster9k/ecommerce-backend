@@ -105,7 +105,7 @@ const editProductService = async (
   id: number,
   data: {
     categoryId?: number | string;
-    name?: string;
+    productName?: string;
     description?: string;
     imageUrl?: string;
     imagePublicId?: string;
@@ -115,8 +115,7 @@ const editProductService = async (
     const updatedProduct = await prisma.product.update({
       where: { id: Number(id) },
       data: {
-        ...(data.categoryId && { categoryId: Number(data.categoryId) }),
-        ...(data.name && { name: data.name }),
+        ...(data.productName && { name: data.productName }),
         ...(data.description && { description: data.description }),
         ...(data.imageUrl && { imageUrl: data.imageUrl }),
         ...(data.imagePublicId && { imagePublicId: data.imagePublicId }),
