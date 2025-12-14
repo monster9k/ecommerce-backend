@@ -1,0 +1,149 @@
+//// ------------------------------------------------------
+//// THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+//// ------------------------------------------------------
+
+Table User {
+  id Int [pk, increment]
+  username String [not null]
+  email String [unique, not null]
+  password String [not null]
+  role String [not null]
+  createAt DateTime [default: `now()`, not null]
+  avatarUrl String
+  avatarPublicId String
+  carts Cart [not null]
+  orders Order [not null]
+  reviews Review [not null]
+}
+
+Table Category {
+  id Int [pk, increment]
+  name String [not null]
+  products Product [not null]
+}
+
+Table Product {
+  id Int [pk, increment]
+  categoryId Int [not null]
+  name String [not null]
+  description String
+  createAt DateTime [default: `now()`, not null]
+  imageUrl String
+  imagePublicId String
+  category Category [not null]
+  variants ProductVariant [not null]
+  images ProductImage [not null]
+  reviews Review [not null]
+  styles ProductStyle [not null]
+}
+
+Table ProductVariant {
+  id Int [pk, increment]
+  productId Int [not null]
+  size String
+  color String
+  price Decimal [not null]
+  stock Int [not null]
+  product Product [not null]
+  cartItems CartItem [not null]
+  orderItems OrderItem [not null]
+}
+
+Table ProductImage {
+  id Int [pk, increment]
+  productId Int [not null]
+  imageUrl String [not null]
+  publicId String
+  product Product [not null]
+}
+
+Table Cart {
+  id Int [pk, increment]
+  userId Int [not null]
+  createdAt DateTime [default: `now()`, not null]
+  user User [not null]
+  items CartItem [not null]
+}
+
+Table CartItem {
+  id Int [pk, increment]
+  cartId Int [not null]
+  productVariantId Int [not null]
+  quantity Int [not null]
+  cart Cart [not null]
+  productVariant ProductVariant [not null]
+}
+
+Table Order {
+  id Int [pk, increment]
+  userId Int [not null]
+  totalPrice Decimal [not null]
+  status String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  user User [not null]
+  items OrderItem [not null]
+}
+
+Table OrderItem {
+  id Int [pk, increment]
+  orderId Int [not null]
+  productVariantId Int [not null]
+  quantity Int [not null]
+  priceAtPurchase Decimal [not null]
+  order Order [not null]
+  productVariant ProductVariant [not null]
+}
+
+Table Review {
+  id Int [pk, increment]
+  userId Int [not null]
+  productId Int [not null]
+  rating Int [not null]
+  comment String
+  createdAt DateTime [default: `now()`, not null]
+  user User [not null]
+  product Product [not null]
+}
+
+Table Style {
+  id Int [pk, increment]
+  name String [unique, not null]
+  products ProductStyle [not null]
+}
+
+Table ProductStyle {
+  productId Int [not null]
+  styleId Int [not null]
+  product Product [not null]
+  style Style [not null]
+
+  indexes {
+    (productId, styleId) [pk]
+  }
+}
+
+Ref: Product.categoryId > Category.id
+
+Ref: ProductVariant.productId > Product.id
+
+Ref: ProductImage.productId > Product.id
+
+Ref: Cart.userId > User.id
+
+Ref: CartItem.cartId > Cart.id
+
+Ref: CartItem.productVariantId > ProductVariant.id
+
+Ref: Order.userId > User.id
+
+Ref: OrderItem.orderId > Order.id
+
+Ref: OrderItem.productVariantId > ProductVariant.id
+
+Ref: Review.userId > User.id
+
+Ref: Review.productId > Product.id
+
+Ref: ProductStyle.productId > Product.id
+
+Ref: ProductStyle.styleId > Style.id

@@ -3,9 +3,7 @@ import prisma from "../prismaClient";
 const createProductService = async (
   categoryId: number,
   name: string,
-  description: string,
-  imageUrl: string,
-  imagePublicId: string
+  description: string
 ) => {
   try {
     const newProduct = await prisma.product.create({
@@ -14,8 +12,6 @@ const createProductService = async (
         categoryId: Number(categoryId),
         name,
         description,
-        imageUrl,
-        imagePublicId,
       },
     });
     return {
@@ -33,37 +29,24 @@ const getProductDBService = async () => {
       include: {
         category: true,
         variants: true,
+        images: true,
+        styles: { include: { style: true } },
       },
       orderBy: { id: "asc" },
     })) as any[];
     const flatData = products.flatMap((product) =>
-      product.variants.length > 0
-        ? product.variants.map((v: any) => ({
-            id: v.id,
-            productId: product.id,
-            productName: product.name,
-            categoryName: product.category?.name,
-            description: product.description,
-            size: v.size,
-            color: v.color,
-            price: v.price,
-            stock: v.stock,
-            imageUrl: product.imageUrl,
-          }))
-        : [
-            {
-              id: product.id,
-              productId: product.id,
-              productName: product.name,
-              categoryName: product.category?.name,
-              description: product.description,
-              size: "-",
-              color: "-",
-              price: 0,
-              stock: 0,
-              imageUrl: product.imageUrl,
-            },
-          ]
+      product.variants.map((v: any) => ({
+        id: v.id,
+        productId: product.id,
+        productName: product.name,
+        categoryName: product.category.name,
+        size: v.size,
+        color: v.color,
+        price: v.price,
+        stock: v.stock,
+        imageUrl: product.images[0]?.imageUrl ?? "",
+        styles: product.styles.map((s: any) => s.style.name),
+      }))
     );
 
     return {

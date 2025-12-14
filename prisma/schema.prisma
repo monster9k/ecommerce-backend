@@ -9,6 +9,12 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+generator dbml {
+  provider = "prisma-dbml-generator"
+  output   = "./dbml"
+}
+
+
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
@@ -22,13 +28,13 @@ model User {
   role     String
   createAt DateTime @default(now())
 
-
   //avatar
-  avatarUrl String?
+  avatarUrl      String?
   avatarPublicId String?
 
-  carts  Cart[]
-  orders Order[]
+  carts   Cart[]
+  orders  Order[]
+  reviews Review[]
 }
 
 model Category {
@@ -50,6 +56,9 @@ model Product {
 
   category Category         @relation(fields: [categoryId], references: [id])
   variants ProductVariant[]
+  images   ProductImage[]
+  reviews  Review[]
+  styles   ProductStyle[]
 }
 
 model ProductVariant {
@@ -63,6 +72,15 @@ model ProductVariant {
   product    Product     @relation(fields: [productId], references: [id])
   cartItems  CartItem[]
   orderItems OrderItem[]
+}
+
+model ProductImage {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  imageUrl  String
+  publicId  String?
+
+  product Product @relation(fields: [productId], references: [id])
 }
 
 model Cart {
@@ -92,7 +110,7 @@ model Order {
   createdAt  DateTime @default(now())
 
   user  User        @relation(fields: [userId], references: [id])
-  items OrderItem[]   
+  items OrderItem[]
 }
 
 model OrderItem {
@@ -105,3 +123,33 @@ model OrderItem {
   order          Order          @relation(fields: [orderId], references: [id])
   productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
 }
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  productId Int
+  rating    Int // 1 - 5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model Style {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  products ProductStyle[]
+}
+
+model ProductStyle {
+  productId Int
+  styleId   Int
+
+  product Product @relation(fields: [productId], references: [id])
+  style   Style   @relation(fields: [styleId], references: [id])
+
+  @@id([productId, styleId])
+}
+

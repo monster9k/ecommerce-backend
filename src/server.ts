@@ -9,6 +9,7 @@ import orderItemRouter from "./route/orderItem";
 import orderRouter from "./route/order";
 import productVariantRouter from "./route/productVariant";
 import configViewEngine from "./config/viewEngine";
+import styleRouter from "./route/style";
 
 require("dotenv").config();
 
@@ -28,6 +29,7 @@ cartItemRouter(app);
 orderItemRouter(app);
 orderRouter(app);
 productVariantRouter(app);
+styleRouter(app);
 
 let port = process.env.PORT || 6969;
 

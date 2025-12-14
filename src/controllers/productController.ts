@@ -15,97 +15,102 @@ import {
 // Product
 import { v2 as cloudinary } from "cloudinary";
 
-export const createProduct = async (req: Request, res: Response) => {
-  const { categoryId, name, description } = req.body;
-  console.log(categoryId, name, description);
-  const category = await prisma.category.findUnique({
-    where: { id: Number(categoryId) },
-  });
-  if (!category) {
-    return res.status(400).json({ message: "Invalid categoryId" });
-  }
-
-  let imageUrl = "";
-  let imagePublicId = "";
-  if (req.file) {
-    const file = req.file as any;
-    imageUrl = file.path; // url ảnh
-    imagePublicId = file.filename; // public_id ảnh
-  }
-
-  const newProduct = await createProductService(
-    categoryId,
-    name,
-    description,
-    imageUrl,
-    imagePublicId
-  );
-
-  if (newProduct && newProduct.success) {
-    return res.status(201).json(newProduct.product);
-  }
-};
-
 export const createProductDashBoard = async (req: Request, res: Response) => {
   try {
-    const { categoryId, name, description, size, color, price, stock } =
+    const { categoryId, name, description, size, color, price, stock, styles } =
       req.body;
 
+    //  check category
     const category = await prisma.category.findUnique({
       where: { id: Number(categoryId) },
     });
-    if (!category)
+    if (!category) {
       return res.status(400).json({ message: "Invalid categoryId" });
-
-    let imageUrl = "";
-    let imagePublicId = "";
-    if (req.file) {
-      const file = req.file as any;
-      imageUrl = file.path; // url ảnh
-      imagePublicId = file.filename; // public_id ảnh
     }
 
+    //  create product
     const productData = await createProductService(
-      categoryId,
+      Number(categoryId),
       name,
-      description,
-      imageUrl,
-      imagePublicId
+      description
     );
-
     if (!productData?.success) {
       return res.status(500).json({ message: "Failed to create product" });
     }
 
     const product = productData.product;
 
-    const productVariant = await createProductVariantService(
-      Number(product.id),
+    //  save images
+    const files = req.files as Express.Multer.File[];
+    if (files?.length) {
+      await prisma.productImage.createMany({
+        data: files.map((file) => ({
+          productId: product.id,
+          imageUrl: file.path,
+          publicId: file.filename,
+        })),
+      });
+    }
+
+    // create variant
+    await createProductVariantService(
+      product.id,
       size || null,
       color || null,
       Number(price) || 0,
       Number(stock) || 0
     );
 
-    const variant = productVariant.variant;
-    const flatData = [
-      {
-        id: variant?.id,
-        productId: product.id,
-        productName: product.name,
-        categoryName: category.name,
-        description: product.description,
-        size: variant?.size,
-        color: variant?.color,
-        price: variant?.price,
-        stock: variant?.stock,
-        imageUrl: product.imageUrl,
-      },
-    ];
+    //  assign styles
+    if (styles?.length) {
+      await prisma.productStyle.createMany({
+        data: styles.map((styleId: number) => ({
+          productId: product.id,
+          styleId: Number(styleId),
+        })),
+      });
+    }
 
+    //  QUERY LẠI FULL PRODUCT
+
+    const fullProduct = await prisma.product.findUnique({
+      where: { id: product.id },
+      include: {
+        category: true,
+        variants: true,
+        images: true,
+        styles: { include: { style: true } },
+      },
+    });
+
+    if (!fullProduct) {
+      return res
+        .status(500)
+        .json({ message: "Product not found after create" });
+    }
+
+    //  FLATTEN GIỐNG GET
+    const flatData = fullProduct.variants.map((v) => ({
+      id: v.id,
+      productId: fullProduct.id,
+      productName: fullProduct.name,
+      categoryName: fullProduct.category.name,
+      size: v.size,
+      color: v.color,
+      price: v.price,
+      stock: v.stock,
+      imageUrl: fullProduct.images[0]?.imageUrl ?? "",
+      styles: fullProduct.styles.map((s) => s.style.name),
+    }));
+
+    // 8️⃣ return
     return res.status(201).json(flatData);
   } catch (error: any) {
-    return { success: false, message: error.message };
+    console.error("CREATE PRODUCT ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -224,7 +229,6 @@ export const deleteProduct = async (req: Request, res: Response) => {
     // đảm bảo khi xóa product thì khách hàng không thể mua các variant của product đó nữa
 
     const deleted = await deleteProductService(Number(id));
-
     console.log(deleted);
     if (deleted.success) {
       return res.json({ message: `Product ${id} deleted successfully` });
