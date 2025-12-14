@@ -26,7 +26,7 @@ let productRouter = (app: Express) => {
   );
   router.get("/api/product", getProducts);
   router.get("/api/product/:id", getProductById);
-  router.put("/api/productDB/:id", upload.single("image"), editProduct);
+  router.put("/api/productDB/:id", upload.array("image", 3), editProduct);
   router.delete("/api/productDB/:id", upload.single("image"), deleteProduct);
   return app.use("/", router);
 };

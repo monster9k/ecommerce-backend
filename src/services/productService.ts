@@ -40,6 +40,7 @@ const getProductDBService = async () => {
         productId: product.id,
         productName: product.name,
         categoryName: product.category.name,
+        description: product.description,
         size: v.size,
         color: v.color,
         price: v.price,
@@ -90,8 +91,6 @@ const editProductService = async (
     categoryId?: number | string;
     productName?: string;
     description?: string;
-    imageUrl?: string;
-    imagePublicId?: string;
   }
 ) => {
   try {
@@ -100,8 +99,6 @@ const editProductService = async (
       data: {
         ...(data.productName && { name: data.productName }),
         ...(data.description && { description: data.description }),
-        ...(data.imageUrl && { imageUrl: data.imageUrl }),
-        ...(data.imagePublicId && { imagePublicId: data.imagePublicId }),
       },
       include: { category: true },
     });
@@ -116,6 +113,9 @@ const deleteProductService = async (id: number) => {
     await prisma.productVariant.deleteMany({
       where: { productId: Number(id) },
     });
+
+    await prisma.productStyle.deleteMany({ where: { productId: id } });
+    await prisma.productImage.deleteMany({ where: { productId: id } });
 
     await prisma.product.delete({
       where: { id: Number(id) },

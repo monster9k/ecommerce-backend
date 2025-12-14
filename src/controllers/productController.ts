@@ -150,37 +150,59 @@ export const getProductById = async (req: Request, res: Response) => {
 export const editProduct = async (req: Request, res: Response) => {
   try {
     const { id } = req.params; // variant id
-    const { productName, description, size, color, price, stock } = req.body;
+    const { productName, description, size, color, price, stock, styles } =
+      req.body;
 
     const variant = await prisma.productVariant.findUnique({
       where: { id: Number(id) },
-      include: { product: true },
+      include: { product: { include: { images: true } } },
     });
     if (!variant) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({ message: "Variant not found" });
     }
 
-    let imageUrl = variant.product.imageUrl;
-    let imagePublicId = variant.product.imagePublicId;
+    const productId = variant.productId;
 
-    if (req.file) {
-      // Xóa ảnh cũ trên Cloudinary nếu có
-      if (variant.product.imagePublicId) {
-        await cloudinary.uploader.destroy(variant.product.imagePublicId);
-      }
-
-      // Upload ảnh mới (multer-cloudinary đã handle rồi, req.file có sẵn)
-      const file = req.file as any;
-      imageUrl = file.path;
-      imagePublicId = file.filename;
-    }
-
-    const updatedProduct = await editProductService(Number(variant.productId), {
+    const updatedProduct = await editProductService(Number(productId), {
       productName,
       description,
-      imageUrl: imageUrl ?? "",
-      imagePublicId: imagePublicId ?? "",
     });
+
+    const files = req.files as Express.Multer.File[];
+    if (files?.length) {
+      // xóa ảnh cũ trên cloudinary
+      for (const img of variant.product.images) {
+        if (img.publicId) {
+          await cloudinary.uploader.destroy(img.publicId);
+        }
+      }
+
+      await prisma.productImage.deleteMany({
+        where: { productId },
+      });
+
+      // tạo ảnh mới
+      await prisma.productImage.createMany({
+        data: files.map((file) => ({
+          productId,
+          imageUrl: file.path,
+          publicId: file.filename,
+        })),
+      });
+    }
+
+    if (styles) {
+      await prisma.productStyle.deleteMany({
+        where: { productId },
+      });
+
+      await prisma.productStyle.createMany({
+        data: styles.map((styleId: number) => ({
+          productId,
+          styleId: Number(styleId),
+        })),
+      });
+    }
 
     const updatedVariant = await editProductVariantService(
       Number(id),
@@ -190,22 +212,30 @@ export const editProduct = async (req: Request, res: Response) => {
       Number(stock)
     );
 
-    const result = {
-      id: updatedVariant.variant?.id,
-      productId: updatedProduct.product?.id,
-      productName: updatedProduct.product?.name,
-      categoryName: updatedProduct.product?.category?.name,
-      description: updatedProduct.product?.description ?? "",
-      size: updatedVariant.variant?.size ?? "-",
-      color: updatedVariant.variant?.color ?? "-",
-      price: Number(updatedVariant.variant?.price),
-      stock: updatedVariant.variant?.stock,
-      imageUrl: updatedProduct.product?.imageUrl,
-    };
+    const fullProduct = await prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        category: true,
+        variants: true,
+        images: true,
+        styles: { include: { style: true } },
+      },
+    });
 
-    if (updatedProduct.success) {
-      return res.json(result);
-    }
+    const flatData = fullProduct!.variants.map((v) => ({
+      id: v.id,
+      productId: fullProduct!.id,
+      productName: fullProduct!.name,
+      categoryName: fullProduct!.category.name,
+      size: v.size,
+      color: v.color,
+      price: v.price,
+      stock: v.stock,
+      imageUrl: fullProduct!.images[0]?.imageUrl ?? "",
+      styles: fullProduct!.styles.map((s) => s.style.name),
+    }));
+
+    return res.json(flatData);
   } catch (error) {
     res.status(500).json({ message: (error as Error).message });
   }
@@ -216,13 +246,16 @@ export const deleteProduct = async (req: Request, res: Response) => {
 
     const product = await prisma.product.findUnique({
       where: { id: Number(id) },
+      include: { images: true },
     });
 
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    if (product.imagePublicId) {
-      await cloudinary.uploader.destroy(product.imagePublicId);
+    for (const img of product.images) {
+      if (img.publicId) {
+        await cloudinary.uploader.destroy(img.publicId);
+      }
     }
 
     // Xóa product và các variant liên quan (nếu có)
