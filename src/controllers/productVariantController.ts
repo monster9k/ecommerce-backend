@@ -3,7 +3,7 @@ import {
   createProductVariantService,
   getProductVariantsService,
   editProductVariantService,
-  deleteProductVariantService,
+  deleteVariantService,
 } from "../services/productVariantService";
 import prisma from "../prismaClient";
 
@@ -64,13 +64,21 @@ export const editProductVariant = async (req: Request, res: Response) => {
 };
 
 // Delete
-export const deleteProductVariant = async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const deleteVariant = async (req: Request, res: Response) => {
+  try {
+    const variantId = Number(req.params.id);
 
-  const result = await deleteProductVariantService(Number(id));
+    const result = await deleteVariantService(variantId);
 
-  if (result.success) {
-    return res.status(200).json({ message: "ProductVariant deleted" });
+    if (!result.success) {
+      return res.status(400).json({ message: result.message });
+    }
+
+    return res.json({
+      message: "Variant deleted successfully",
+      productDeleted: result.productDeleted,
+    });
+  } catch (error) {
+    res.status(500).json({ message: (error as Error).message });
   }
-  return res.status(500).json(result.error);
 };

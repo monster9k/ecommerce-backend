@@ -3,7 +3,6 @@ import { Request, Response } from "express";
 import {
   createProductService,
   getProductDBService,
-  getProductService,
   getProductByIdService,
   editProductService,
   deleteProductService,
@@ -17,10 +16,9 @@ import { v2 as cloudinary } from "cloudinary";
 
 export const createProductDashBoard = async (req: Request, res: Response) => {
   try {
-    const { categoryId, name, description, size, color, price, stock, styles } =
-      req.body;
+    const { categoryId, productName, description, variants, styles } = req.body;
 
-    //  check category
+    // 1. check category
     const category = await prisma.category.findUnique({
       where: { id: Number(categoryId) },
     });
@@ -28,51 +26,56 @@ export const createProductDashBoard = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid categoryId" });
     }
 
-    //  create product
-    const productData = await createProductService(
-      Number(categoryId),
-      name,
-      description
-    );
-    if (!productData?.success) {
-      return res.status(500).json({ message: "Failed to create product" });
+    // 2. parse variants
+    const parsedVariants = JSON.parse(variants || "[]");
+    if (!Array.isArray(parsedVariants) || parsedVariants.length === 0) {
+      return res.status(400).json({ message: "Variants are required" });
     }
 
-    const product = productData.product;
+    // 3. create product
+    const product = await prisma.product.create({
+      data: {
+        categoryId: Number(categoryId),
+        name: productName,
+        description,
+      },
+    });
 
-    //  save images
+    // 4. images
     const files = req.files as Express.Multer.File[];
     if (files?.length) {
       await prisma.productImage.createMany({
-        data: files.map((file) => ({
+        data: files.map((f) => ({
           productId: product.id,
-          imageUrl: file.path,
-          publicId: file.filename,
+          imageUrl: f.path,
+          publicId: f.filename,
         })),
       });
     }
 
-    // create variant
-    await createProductVariantService(
-      product.id,
-      size || null,
-      color || null,
-      Number(price) || 0,
-      Number(stock) || 0
-    );
+    // 5. create variants (CORE FIX)
+    await prisma.productVariant.createMany({
+      data: parsedVariants.map((v: any) => ({
+        productId: product.id,
+        size: v.size ?? null,
+        color: v.color ?? null,
+        price: Number(v.price),
+        stock: Number(v.stock),
+      })),
+    });
 
-    //  assign styles
+    // 6. styles
     if (styles?.length) {
+      const styleIds = Array.isArray(styles) ? styles : [styles];
       await prisma.productStyle.createMany({
-        data: styles.map((styleId: number) => ({
+        data: styleIds.map((id: string) => ({
           productId: product.id,
-          styleId: Number(styleId),
+          styleId: Number(id),
         })),
       });
     }
 
-    //  QUERY LẠI FULL PRODUCT
-
+    // 7. response
     const fullProduct = await prisma.product.findUnique({
       where: { id: product.id },
       include: {
@@ -83,34 +86,24 @@ export const createProductDashBoard = async (req: Request, res: Response) => {
       },
     });
 
-    if (!fullProduct) {
-      return res
-        .status(500)
-        .json({ message: "Product not found after create" });
-    }
-
-    //  FLATTEN GIỐNG GET
-    const flatData = fullProduct.variants.map((v) => ({
+    const flat = fullProduct!.variants.map((v) => ({
       id: v.id,
-      productId: fullProduct.id,
-      productName: fullProduct.name,
-      categoryName: fullProduct.category.name,
+      productId: product.id,
+      productName: fullProduct!.name,
+      categoryName: fullProduct!.category.name,
+      description: fullProduct!.description,
       size: v.size,
       color: v.color,
       price: v.price,
       stock: v.stock,
-      imageUrl: fullProduct.images[0]?.imageUrl ?? "",
-      styles: fullProduct.styles.map((s) => s.style.name),
+      imageUrl: fullProduct!.images[0]?.imageUrl ?? "",
+      styles: fullProduct!.styles.map((s) => s.style.name),
     }));
 
-    // 8️⃣ return
-    return res.status(201).json(flatData);
-  } catch (error: any) {
-    console.error("CREATE PRODUCT ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(201).json(flat);
+  } catch (err: any) {
+    console.error(err);
+    return res.status(500).json({ message: err.message });
   }
 };
 
@@ -127,10 +120,66 @@ export const getProductDashBoard = async (req: Request, res: Response) => {
 
 export const getProducts = async (req: Request, res: Response) => {
   try {
-    const products = await getProductService();
-    if (products.success) {
-      res.status(200).json(products.products);
+    const {
+      page = 1,
+      limit = 9,
+      minPrice,
+      maxPrice,
+      size,
+      color,
+      style,
+    } = req.query;
+
+    const where: any = {};
+
+    //filter variants
+    where.variants = {
+      some: {
+        ...(size && { size: String(size) }),
+        ...(color && { color: String(color) }),
+        ...(minPrice || maxPrice
+          ? {
+              price: {
+                ...(minPrice && { gte: Number(minPrice) }),
+                ...(maxPrice && { lte: Number(maxPrice) }),
+              },
+            }
+          : {}),
+      },
+    };
+
+    //filtes styles
+    if (style) {
+      where.styles = {
+        some: {
+          name: String(style),
+        },
+      };
     }
+    //promise all chay 2 luog ss
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        include: {
+          images: true,
+          variants: true,
+          styles: { include: { style: true } },
+        },
+        skip: (Number(page) - 1) * Number(limit),
+        take: Number(limit),
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    res.json({
+      data: products,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages: Math.ceil(total / Number(limit)),
+      },
+    });
   } catch (error) {
     res.status(500).json({ message: (error as Error).message });
   }
@@ -149,39 +198,64 @@ export const getProductById = async (req: Request, res: Response) => {
 };
 export const editProduct = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params; // variant id
+    const variantId = Number(req.params.id);
     const { productName, description, size, color, price, stock, styles } =
       req.body;
 
     const variant = await prisma.productVariant.findUnique({
-      where: { id: Number(id) },
+      where: { id: variantId },
       include: { product: { include: { images: true } } },
     });
+
     if (!variant) {
       return res.status(404).json({ message: "Variant not found" });
     }
 
     const productId = variant.productId;
 
-    const updatedProduct = await editProductService(Number(productId), {
-      productName,
-      description,
+    //  Update PRODUCT (chỉ khi có data)
+    if (productName || description) {
+      await prisma.product.update({
+        where: { id: productId },
+        data: {
+          ...(productName && { name: productName }),
+          ...(description && { description }),
+        },
+      });
+    }
+
+    //  Update VARIANT
+    await prisma.productVariant.update({
+      where: { id: variantId },
+      data: {
+        size,
+        color,
+        price: Number(price),
+        stock: Number(stock),
+      },
     });
 
+    //  Update STYLES (chỉ khi gửi lên)
+    if (Array.isArray(styles)) {
+      await prisma.productStyle.deleteMany({ where: { productId } });
+      await prisma.productStyle.createMany({
+        data: styles.map((id: number) => ({
+          productId,
+          styleId: Number(id),
+        })),
+      });
+    }
+
+    //  Update IMAGES (chỉ khi upload mới)
     const files = req.files as Express.Multer.File[];
     if (files?.length) {
-      // xóa ảnh cũ trên cloudinary
       for (const img of variant.product.images) {
         if (img.publicId) {
           await cloudinary.uploader.destroy(img.publicId);
         }
       }
 
-      await prisma.productImage.deleteMany({
-        where: { productId },
-      });
-
-      // tạo ảnh mới
+      await prisma.productImage.deleteMany({ where: { productId } });
       await prisma.productImage.createMany({
         data: files.map((file) => ({
           productId,
@@ -191,27 +265,7 @@ export const editProduct = async (req: Request, res: Response) => {
       });
     }
 
-    if (styles) {
-      await prisma.productStyle.deleteMany({
-        where: { productId },
-      });
-
-      await prisma.productStyle.createMany({
-        data: styles.map((styleId: number) => ({
-          productId,
-          styleId: Number(styleId),
-        })),
-      });
-    }
-
-    const updatedVariant = await editProductVariantService(
-      Number(id),
-      size || null,
-      color || null,
-      Number(price),
-      Number(stock)
-    );
-
+    //  Trả về TOÀN BỘ variants
     const fullProduct = await prisma.product.findUnique({
       where: { id: productId },
       include: {
@@ -224,8 +278,9 @@ export const editProduct = async (req: Request, res: Response) => {
 
     const flatData = fullProduct!.variants.map((v) => ({
       id: v.id,
-      productId: fullProduct!.id,
+      productId,
       productName: fullProduct!.name,
+      description: fullProduct!.description,
       categoryName: fullProduct!.category.name,
       size: v.size,
       color: v.color,
@@ -235,11 +290,12 @@ export const editProduct = async (req: Request, res: Response) => {
       styles: fullProduct!.styles.map((s) => s.style.name),
     }));
 
-    return res.json(flatData);
-  } catch (error) {
-    res.status(500).json({ message: (error as Error).message });
+    res.json(flatData);
+  } catch (err) {
+    res.status(500).json({ message: (err as Error).message });
   }
 };
+
 export const deleteProduct = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

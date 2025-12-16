@@ -59,17 +59,6 @@ const getProductDBService = async () => {
   }
 };
 
-const getProductService = async () => {
-  try {
-    const products = await prisma.product.findMany({
-      include: { category: true, variants: true },
-    });
-    return { success: true, products };
-  } catch (error) {
-    throw new Error("Error fetching products");
-  }
-};
-
 const getProductByIdService = async (id: number) => {
   try {
     const product = await prisma.product.findUnique({
@@ -130,7 +119,6 @@ const deleteProductService = async (id: number) => {
 export {
   createProductService,
   getProductDBService,
-  getProductService,
   getProductByIdService,
   editProductService,
   deleteProductService,

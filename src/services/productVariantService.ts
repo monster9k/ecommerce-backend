@@ -1,4 +1,5 @@
 import prisma from "../prismaClient";
+import { v2 as cloudinary } from "cloudinary";
 
 export const createProductVariantService = async (
   productId: number,
@@ -59,11 +60,62 @@ export const editProductVariantService = async (
   }
 };
 
-export const deleteProductVariantService = async (id: number) => {
+export const deleteVariantService = async (variantId: number) => {
   try {
-    await prisma.productVariant.delete({ where: { id } });
-    return { success: true };
-  } catch (error) {
-    return { success: false, error };
+    // Lấy variant
+    const variant = await prisma.productVariant.findUnique({
+      where: { id: variantId },
+    });
+
+    if (!variant) {
+      return { success: false, message: "Variant not found" };
+    }
+
+    const productId = variant.productId;
+
+    // Xóa variant
+    await prisma.productVariant.delete({
+      where: { id: variantId },
+    });
+
+    // Kiểm tra còn variant không
+    const remainCount = await prisma.productVariant.count({
+      where: { productId },
+    });
+
+    //  Nếu còn → dừng ở đây
+    if (remainCount > 0) {
+      return {
+        success: true,
+        productDeleted: false,
+      };
+    }
+
+    // Nếu không còn variant → xóa product
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { images: true },
+    });
+
+    // xóa ảnh cloudinary
+    for (const img of product?.images || []) {
+      if (img.publicId) {
+        await cloudinary.uploader.destroy(img.publicId);
+      }
+    }
+
+    // xóa toàn bộ dữ liệu liên quan
+    await prisma.$transaction([
+      prisma.productStyle.deleteMany({ where: { productId } }),
+      prisma.productImage.deleteMany({ where: { productId } }),
+      prisma.product.delete({ where: { id: productId } }),
+    ]);
+
+    return {
+      success: true,
+      productDeleted: true,
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message };
   }
 };

@@ -6,7 +6,7 @@ import {
   createProductVariant,
   getProductVariants,
   editProductVariant,
-  deleteProductVariant,
+  deleteVariant,
 } from "../controllers/productVariantController";
 
 import { auth, vertifyRole } from "../middleware/auth";
@@ -18,7 +18,7 @@ let productVariantRouter = (app: Express) => {
   router.post("/api/product-variant", createProductVariant);
   router.get("/api/product-variant", getProductVariants);
   router.put("/api/product-variant/:id", editProductVariant);
-  router.delete("/api/product-variant/:id", deleteProductVariant);
+  router.delete("/api/product-variant/:id", deleteVariant);
   return app.use("/", router);
 };
 
