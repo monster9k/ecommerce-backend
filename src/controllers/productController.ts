@@ -123,11 +123,12 @@ export const getProducts = async (req: Request, res: Response) => {
     const {
       page = 1,
       limit = 9,
+      categoryId,
       minPrice,
       maxPrice,
       size,
       color,
-      style,
+      styles,
     } = req.query;
 
     const where: any = {};
@@ -148,11 +149,17 @@ export const getProducts = async (req: Request, res: Response) => {
       },
     };
 
+    if (req.query.categoryId) {
+      where.categoryId = Number(req.query.categoryId);
+    }
+
     //filtes styles
-    if (style) {
+    if (styles) {
+      // neu truyền array thì bth còn nếu truyền vào 1 thì tự động chuyển thành array
+      const styleArray = Array.isArray(styles) ? styles : [styles];
       where.styles = {
         some: {
-          name: String(style),
+          name: { in: styleArray as string[] },
         },
       };
     }
@@ -160,10 +167,19 @@ export const getProducts = async (req: Request, res: Response) => {
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
-        include: {
-          images: true,
-          variants: true,
-          styles: { include: { style: true } },
+        select: {
+          // Lấy ảnh
+          id: true,
+          name: true,
+          images: {
+            select: { id: true, imageUrl: true }, // Chỉ lấy url và id của ảnh cho nhẹ
+            take: 1,
+          },
+
+          variants: {
+            select: { price: true },
+            take: 1, // Chỉ lấy 1 giá đại diện
+          },
         },
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
