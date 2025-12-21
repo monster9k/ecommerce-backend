@@ -204,9 +204,9 @@ export const getProducts = async (req: Request, res: Response) => {
 export const getProductById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const product = await getProductByIdService(Number(id));
-    if (product.success) {
-      return res.status(200).json(product.product);
+    const result = await getProductByIdService(Number(id));
+    if (result.success) {
+      return res.status(200).json(result.product);
     }
   } catch (error) {
     res.status(500).json({ message: (error as Error).message });

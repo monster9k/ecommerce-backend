@@ -63,7 +63,7 @@ const getProductByIdService = async (id: number) => {
   try {
     const product = await prisma.product.findUnique({
       where: { id: Number(id) },
-      include: { category: true },
+      include: { category: true, images: true, variants: true },
     });
     if (!product) {
       return { success: false, message: "Product not found" };
