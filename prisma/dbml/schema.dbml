@@ -9,6 +9,8 @@ Table User {
   password String [not null]
   role String [not null]
   createAt DateTime [default: `now()`, not null]
+  phone String [not null, default: '0000000000']
+  address String [not null, default: 'Chưa cập nhật']
   avatarUrl String
   avatarPublicId String
   carts Cart [not null]
@@ -27,6 +29,7 @@ Table Product {
   categoryId Int [not null]
   name String [not null]
   description String
+  sold Int [not null, default: 0]
   createAt DateTime [default: `now()`, not null]
   imageUrl String
   imagePublicId String
@@ -80,6 +83,8 @@ Table Order {
   totalPrice Decimal [not null]
   status String [not null]
   createdAt DateTime [default: `now()`, not null]
+  shippingAddress String [not null, default: 'Chưa cập nhật']
+  phone String [not null, default: '0000000000']
   user User [not null]
   items OrderItem [not null]
 }

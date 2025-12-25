@@ -51,7 +51,7 @@ let getUser = async (req: Request, res: Response) => {
 
 let editUser = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { username, email } = req.body;
+  const { username, email, phone, address } = req.body;
 
   if (!username || !email) {
     return res.status(400).json({
@@ -97,6 +97,8 @@ let editUser = async (req: Request, res: Response) => {
       Number(id),
       username,
       email,
+      phone,
+      address,
       avatarUrl,
       avatarPublicId
     );

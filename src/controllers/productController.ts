@@ -129,6 +129,9 @@ export const getProducts = async (req: Request, res: Response) => {
       size,
       color,
       styles,
+      sortBy,
+      order = "desc",
+      search,
     } = req.query;
 
     const where: any = {};
@@ -163,10 +166,31 @@ export const getProducts = async (req: Request, res: Response) => {
         },
       };
     }
+
+    // createAt
+    let orderBy: any = {};
+
+    if (sortBy === "sold") {
+      orderBy = { sold: order }; // Sắp xếp theo cột 'sold' vừa tạo
+    } else if (sortBy === "createAt" || sortBy === "createdAt") {
+      orderBy = { createAt: order };
+    } else if (sortBy === "id") {
+      orderBy = { id: order };
+    } else {
+      orderBy = { createAt: "desc" };
+    }
+
+    if (search) {
+      where.name = {
+        contains: String(search), // Tìm kiếm gần đúng
+      };
+    }
+
     //promise all chay 2 luog ss
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
+        orderBy: orderBy,
         select: {
           // Lấy ảnh
           id: true,

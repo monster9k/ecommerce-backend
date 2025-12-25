@@ -27,6 +27,8 @@ model User {
   password String
   role     String
   createAt DateTime @default(now())
+  phone String @default("0000000000")
+  address String @default("Chưa cập nhật")
 
   //avatar
   avatarUrl      String?
@@ -48,6 +50,7 @@ model Product {
   categoryId  Int
   name        String
   description String?
+  sold        Int      @default(0)
   createAt    DateTime @default(now())
 
   //img 
@@ -108,6 +111,9 @@ model Order {
   totalPrice Decimal  @db.Decimal(10, 2)
   status     String
   createdAt  DateTime @default(now())
+
+  shippingAddress String @default("Chưa cập nhật")
+  phone           String @default("0000000000")
 
   user  User        @relation(fields: [userId], references: [id])
   items OrderItem[]

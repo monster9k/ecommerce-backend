@@ -124,6 +124,8 @@ const getUserService = async () => {
         username: true,
         email: true,
         role: true,
+        phone: true,
+        address: true,
         createAt: true,
       },
       orderBy: { createAt: "desc" },
@@ -141,6 +143,8 @@ const updateUserService = async (
   id: number,
   username: string,
   email: string,
+  phone: string,
+  address: string,
   avatarUrl?: string,
   avatarPublicId?: string
 ) => {
@@ -152,12 +156,16 @@ const updateUserService = async (
       data: {
         ...(username && { username }),
         ...(email && { email }),
+        ...(phone && { phone }),
+        ...(address && { address }),
         ...(avatarUrl && { avatarUrl }),
         ...(avatarPublicId && { avatarPublicId }),
       },
       select: {
         id: true,
         username: true,
+        phone: true,
+        address: true,
         email: true,
         avatarUrl: true,
         avatarPublicId: true,
@@ -202,6 +210,8 @@ const deleteUserService = async (id: number) => {
         id: true,
         username: true,
         email: true,
+        phone: true,
+        address: true,
       },
     });
 
