@@ -70,3 +70,27 @@ export const createOrderService = async (userId: number, data: any) => {
 
   return result;
 };
+
+export const getOrdersByUserService = async (userId: number) => {
+  const orders = await prisma.order.findMany({
+    where: { userId: userId },
+    orderBy: { createdAt: "desc" }, // Sắp xếp đơn mới nhất lên đầu
+    include: {
+      items: {
+        include: {
+          productVariant: {
+            include: {
+              product: {
+                include: {
+                  images: true, // Lấy ảnh sản phẩm để hiển thị
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return orders;
+};
