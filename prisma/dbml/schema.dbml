@@ -85,6 +85,8 @@ Table Order {
   createdAt DateTime [default: `now()`, not null]
   shippingAddress String [not null, default: 'Chưa cập nhật']
   phone String [not null, default: '0000000000']
+  paymentMethod String [not null, default: 'COD']
+  isPaid Boolean [not null, default: false]
   user User [not null]
   items OrderItem [not null]
 }

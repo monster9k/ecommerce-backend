@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `Order` ADD COLUMN `isPaid` BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN `paymentMethod` VARCHAR(191) NOT NULL DEFAULT 'COD';

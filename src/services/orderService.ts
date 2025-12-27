@@ -1,95 +1,72 @@
 import prisma from "../prismaClient";
 
-export const createOrderService = async (userId: number) => {
-  try {
-    // Lấy giỏ hàng của user
-    const cart = await prisma.cart.findFirst({
-      where: { userId },
-      include: {
-        items: {
-          include: {
-            productVariant: true, // để có giá, size, màu
-          },
-        },
-      },
-    });
+export const createOrderService = async (userId: number, data: any) => {
+  const { fullName, phone, address, totalPrice, paymentMethod } = data;
 
-    if (!cart || cart.items.length === 0) {
-      return { success: false, message: "Cart is empty" };
+  const cart = await prisma.cart.findFirst({
+    where: { userId },
+    include: {
+      items: {
+        include: { productVariant: true },
+      },
+    },
+  });
+
+  if (!cart || cart.items.length === 0) {
+    throw new Error("Cart is empty");
+  }
+
+  // Chạy Transaction để đảm bảo toàn vẹn dữ liệu
+  // (Mọi thao tác trong này: Tạo đơn, Trừ kho, Xóa giỏ -> Thành công cùng lúc hoặc Thất bại cùng lúc)
+  const result = await prisma.$transaction(async (tx) => {
+    // Kiem tra ton kho truoc khi tao don
+    for (const item of cart.items) {
+      if (item.productVariant.stock < item.quantity) {
+        throw new Error(
+          `Sản phẩm (ID: ${item.productVariant.productId}) Variant (ID: ${item.productVariant.id}) không đủ hàng. Còn lại: ${item.productVariant.stock}`
+        );
+      }
     }
 
-    // Tính tổng giá trị
-    const totalPrice = cart.items.reduce((sum, item) => {
-      return (
-        sum + Number(item.quantity) * Number(item.productVariant.price) // lấy giá thật
-      );
-    }, 0);
-
-    // Tạo order kèm orderItems
-    const order = await prisma.order.create({
+    // Tao 1 Order moi
+    const order = await tx.order.create({
       data: {
-        userId,
-        totalPrice,
-        status: "PENDING",
+        userId: userId,
+        totalPrice: totalPrice,
+        status: "PENDING", // Trạng thái mặc định khi mới đặt
+        shippingAddress: `${address} - (Người nhận: ${fullName})`, // Format địa chỉ kèm tên người nhận
+        phone: phone,
+
+        // --- CÁC TRƯỜNG THANH TOÁN MỚI ---
+        paymentMethod: paymentMethod,
+        isPaid: false, // Mặc định là chưa thanh toán
+        // ---------------------------------
+
         items: {
           create: cart.items.map((item) => ({
             productVariantId: item.productVariantId,
             quantity: item.quantity,
-            priceAtPurchase: item.productVariant.price, // chốt giá tại thời điểm checkout
+            priceAtPurchase: item.productVariant.price, // Lưu giá tại thời điểm mua để chốt doanh thu (tránh giá sp thay đổi sau này)
           })),
         },
       },
-      include: { items: true },
     });
 
-    // Clear giỏ hàng
-    await prisma.cartItem.deleteMany({
+    // Tru ton kho (stock) cua tung san pham
+    for (const item of cart.items) {
+      await tx.productVariant.update({
+        where: { id: item.productVariant.id },
+        data: { stock: { decrement: item.quantity } },
+      });
+    }
+
+    // Xoa sach item trong gio hang khi dat thanh cong
+    await tx.cartItem.deleteMany({
       where: { cartId: cart.id },
     });
 
-    return { success: true, order };
-  } catch (error) {
-    return { success: false, error };
-  }
-};
-
-export const getOrdersService = async (userId: number) => {
-  return prisma.order.findMany({
-    where: { userId },
-    include: { items: true },
-  });
-};
-
-export const getAllOrdersService = async () => {
-  return prisma.order.findMany({
-    include: { items: true },
-  });
-};
-
-export const getOrderByIdService = async (id: number, userId: number) => {
-  return prisma.order.findFirst({
-    where: { id, userId }, // để không xem order người khác
-    include: { items: true },
-  });
-};
-
-export const updateOrderStatusService = async (
-  id: number,
-  status: string,
-  userId: number
-) => {
-  return prisma.order.update({
-    where: { id },
-    data: { status },
-  });
-};
-
-export const deleteOrderService = async (id: number, userId: number) => {
-  await prisma.orderItem.deleteMany({
-    where: { orderId: id },
+    return order;
   });
 
-  return prisma.order.delete({
-    where: { id },
-  });
+  return result;
 };

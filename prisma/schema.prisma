@@ -114,6 +114,8 @@ model Order {
 
   shippingAddress String @default("Chưa cập nhật")
   phone           String @default("0000000000")
+  paymentMethod   String   @default("COD") // "COD" | "BANK"
+  isPaid          Boolean  @default(false) // Đã thanh toán chưa?
 
   user  User        @relation(fields: [userId], references: [id])
   items OrderItem[]
