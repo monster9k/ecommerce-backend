@@ -94,3 +94,80 @@ export const getOrdersByUserService = async (userId: number) => {
 
   return orders;
 };
+
+export const getAllOrdersAdminService = async (search?: string) => {
+  // Xây dựng điều kiện lọc (Where clause)
+  let whereCondition: any = {};
+
+  if (search) {
+    const searchNum = Number(search);
+
+    // Nếu search là số -> Tìm theo Order ID hoặc User ID
+    if (!isNaN(searchNum)) {
+      whereCondition = {
+        OR: [
+          { id: searchNum }, // Tìm theo mã đơn
+          { userId: searchNum }, // Tìm theo mã user
+        ],
+      };
+    } else {
+      // Nếu search là chữ -> Tìm theo Username hoặc Email hoặc SĐT người nhận
+      whereCondition = {
+        OR: [
+          { user: { username: { contains: search } } }, // Tìm theo tên user
+          { user: { email: { contains: search } } }, // Tìm theo email
+          { phone: { contains: search } }, // Tìm theo sđt giao hàng
+        ],
+      };
+    }
+  }
+
+  const orders = await prisma.order.findMany({
+    where: whereCondition,
+    orderBy: { createdAt: "desc" }, // Mới nhất lên đầu
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          avatarUrl: true,
+        },
+      },
+      items: true, // Lấy items để tính tổng số lượng (itemCount)
+    },
+  });
+
+  return orders;
+};
+
+// 2. ADMIN: Cập nhật đơn hàng (Status, Payment)
+export const updateOrderAdminService = async (orderId: number, data: any) => {
+  // data bao gồm: status, isPaid, shippingAddress...
+  const updatedOrder = await prisma.order.update({
+    where: { id: orderId },
+    data: data,
+  });
+  return updatedOrder;
+};
+
+// 3. ADMIN: Xóa đơn hàng
+export const deleteOrderAdminService = async (orderId: number) => {
+  // Dùng transaction để đảm bảo xóa sạch OrderItem trước khi xóa Order
+  // (Tuy nhiên Prisma có thể config cascade delete, nhưng viết code cho chắc)
+  const result = await prisma.$transaction(async (tx) => {
+    // Xóa item con trước
+    await tx.orderItem.deleteMany({
+      where: { orderId: orderId },
+    });
+
+    // Xóa đơn hàng
+    const deleted = await tx.order.delete({
+      where: { id: orderId },
+    });
+
+    return deleted;
+  });
+
+  return result;
+};
