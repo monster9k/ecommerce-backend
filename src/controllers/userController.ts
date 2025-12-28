@@ -53,12 +53,12 @@ let editUser = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { username, email, phone, address } = req.body;
 
-  if (!username || !email) {
-    return res.status(400).json({
-      success: false,
-      message: "Username or Email is required",
-    });
-  }
+  // if (!username || !email) {
+  //   return res.status(400).json({
+  //     success: false,
+  //     message: "Username or Email is required",
+  //   });
+  // }
 
   // giờ có thể truy cập req.user
   if (req.user?.role !== "admin" && req.user?.id !== Number(id)) {
@@ -102,6 +102,8 @@ let editUser = async (req: Request, res: Response) => {
       avatarUrl,
       avatarPublicId
     );
+    // console.log(result);
+
     return res.status(200).json(result);
   } catch (e) {
     console.log(e);
@@ -123,8 +125,31 @@ let deleteUser = async (req: Request, res: Response) => {
   }
 };
 
-let getAccountInfo = (req: Request, res: Response) => {
-  return res.status(200).json(req.user);
+let getAccountInfo = async (req: Request, res: Response) => {
+  try {
+    // 1. Lấy ID từ token (req.user do middleware gán vào)
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // 2. Query Database để lấy thông tin MỚI NHẤT
+    const user = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 3. Loại bỏ password trước khi trả về (Bảo mật)
+    const { password, ...userData } = user;
+    // 4. Trả về userData mới tinh từ DB
+    return res.status(200).json(userData);
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
+  }
 };
 
 export { createUser, loginUser, getUser, getAccountInfo, editUser, deleteUser };
